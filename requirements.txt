@@ -1,0 +1,29 @@
+# Core FastAPI/Web Framework
+fastapi
+uvicorn[standard] # ASGI server
+
+# Database (SQLAlchemy ORM + Postgres Driver + Migrations)
+sqlalchemy
+psycopg[binary] # Faster Postgres driver (requires C build tools or pre-built wheels)
+# psycopg # Pure Python driver (alternative if binary causes issues)
+alembic
+
+# Data Validation & Settings
+pydantic
+pydantic-settings
+
+# Authentication (JWT Handling)
+python-jose[cryptography]
+passlib[bcrypt] # For password hashing (if storing users locally in future)
+# python-multipart # Needed for form data (e.g., file uploads, OAuth2 password flow form)
+
+# HTTP Client (for SaaS Integration)
+httpx 
+
+# Background Tasks (Optional - uncomment if using Celery)
+# celery[redis]
+# flower # Optional Celery monitoring dashboard
+
+# Utilities
+# python-dotenv # Implicitly used by pydantic-settings to load .env
+# email-validator # Often needed by Pydantic for EmailStr validation 
