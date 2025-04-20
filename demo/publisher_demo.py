@@ -4,15 +4,17 @@ from fastapi.templating import Jinja2Templates
 from typing import Optional
 
 # Import shared components
-from common import (
+from .common import (
     publishers, subscriptions, transactions, transaction_counter,
     PublisherCapitalCall, CanonicalCapitalCall,
     get_publisher_id_from_token, translate_publisher_to_canonical
 )
+# Need to import common itself to increment the counter
+from . import common
 
 app = FastAPI(title="PMDC Publisher Demo")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="demo/templates")
 
 # --- Publisher Endpoints ---
 

@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from typing import List, Optional
 
 # Import shared components
-from common import (
+from .common import (
     publishers, subscribers, subscriptions, transactions,
     CanonicalCapitalCall, SubscriberCapitalCallView,
     verify_subscriber_token, is_subscriber_authorized, translate_canonical_to_subscriber
@@ -12,7 +12,7 @@ from common import (
 
 app = FastAPI(title="PMDC Subscriber Demo")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="demo/templates")
 
 # --- Subscriber Endpoints ---
 

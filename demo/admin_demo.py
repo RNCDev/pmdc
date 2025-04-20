@@ -5,15 +5,15 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 # Import shared components
-import common
-from common import (
+# import common # No longer needed directly
+from .common import (
     publishers, subscribers, subscriptions, transactions,
     ADMIN_TOKEN, verify_admin_token # Import admin token and verification
 )
 
 app = FastAPI(title="PMDC Admin Demo")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="demo/templates")
 
 # --- Dependency for Admin Authentication ---
 async def verify_admin_access(x_admin_token: Optional[str] = Header(None)):
