@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMDC Publisher Demo</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        label { display: block; margin-top: 10px; }
+        input[type=text], input[type=number] { width: 300px; padding: 5px; margin-top: 5px; }
+        button { margin-top: 15px; padding: 10px 15px; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; margin-top: 15px; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>PMDC Publisher Demo</h1>
+
+    <h2>Publish Capital Call</h2>
+    <form id="publishForm">
+        <label for="publisher">Select Publisher:</label>
+        <select id="publisher" name="publisher" required>
+            {% for pub_id, pub_info in publishers.items() %}
+                <option value="{{ pub_id }}" data-token="{{ pub_info.token }}">{{ pub_info.name }} ({{ pub_id }})</option>
+            {% endfor %}
+        </select>
+
+        <label for="transaction_id">Publisher Transaction ID:</label>
+        <input type="text" id="transaction_id" name="transaction_id" required value="tx-{{ range(1000, 9999) | random }}">
+
+        <label for="total_amount">Total Amount:</label>
+        <input type="number" step="any" id="total_amount" name="total_amount" required value="2000000">
+
+        <label for="investment_amount">Investment Amount:</label>
+        <input type="number" step="any" id="investment_amount" name="investment_amount" required value="1800000">
+
+        <label for="investment_target">Investment Target:</label>
+        <input type="text" id="investment_target" name="investment_target" required value="Project Alpha">
+
+        <label for="fee_amount">Fee Amount:</label>
+        <input type="number" step="any" id="fee_amount" name="fee_amount" required value="200000">
+
+        <label for="fee_description">Fee Description:</label>
+        <input type="text" id="fee_description" name="fee_description" value="Management Fee">
+
+        <button type="submit">Publish Transaction</button>
+    </form>
+
+    <div id="publishResult"></div>
+
+    <script>
+        document.getElementById('publishForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                // Convert number fields from string to number
+                if (key === 'total_amount' || key === 'investment_amount' || key === 'fee_amount') {
+                    data[key] = parseFloat(value);
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            const selectedPublisher = form.elements.publisher;
+            const publisherToken = selectedPublisher.options[selectedPublisher.selectedIndex].getAttribute('data-token');
+
+            const resultDiv = document.getElementById('publishResult');
+            resultDiv.innerHTML = 'Processing...';
+
+            try {
+                const response = await fetch('/publish', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Publisher-Token': publisherToken
+                    },
+                    body: JSON.stringify(data) // Send all form data except the publisher selector itself
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                resultDiv.innerHTML = `<p class="success">Success!</p><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                console.error('Publish error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

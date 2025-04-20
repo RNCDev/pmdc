@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMDC Subscriber Demo</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        label { display: block; margin-top: 10px; }
+        input[type=text], input[type=password] { width: 300px; padding: 5px; margin-top: 5px; }
+        button { margin-top: 15px; padding: 10px 15px; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; margin-top: 15px; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>PMDC Subscriber Demo</h1>
+
+    <h2>Fetch Your Transactions</h2>
+    <form id="subscribeForm">
+        <label for="subscriber">Select Subscriber:</label>
+        <select id="subscriber" name="subscriber" required>
+            {% for sub_id, sub_info in subscribers.items() %}
+                <option value="{{ sub_id }}" data-token="{{ sub_info.token }}">{{ sub_info.name }} ({{ sub_id }})</option>
+            {% endfor %}
+        </select>
+
+        <label for="subscriber_token">Your Token:</label>
+        <input type="password" id="subscriber_token" name="subscriber_token" required>
+        <small>Hint: Use the token associated with the selected subscriber (e.g., sub_token_abc for Sub 1).</small>
+
+        <button type="submit">Fetch Data</button>
+    </form>
+
+    <h2>Received Data:</h2>
+    <div id="subscribeResult"><pre>No data fetched yet.</pre></div>
+
+    <script>
+        // Pre-fill token field when subscriber changes for convenience
+        const subscriberSelect = document.getElementById('subscriber');
+        const tokenInput = document.getElementById('subscriber_token');
+
+        function updateTokenHint() {
+            const selectedOption = subscriberSelect.options[subscriberSelect.selectedIndex];
+            if (selectedOption) {
+                tokenInput.value = selectedOption.getAttribute('data-token') || '';
+            }
+        }
+        subscriberSelect.addEventListener('change', updateTokenHint);
+        // Initial call
+        updateTokenHint();
+
+
+        document.getElementById('subscribeForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const selectedSubscriberId = form.elements.subscriber.value;
+            const subscriberToken = form.elements.subscriber_token.value;
+
+            const resultDiv = document.getElementById('subscribeResult');
+            resultDiv.innerHTML = 'Fetching...';
+
+            if (!selectedSubscriberId || !subscriberToken) {
+                resultDiv.innerHTML = `<p class="error">Error: Please select a subscriber and enter a token.</p>`;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/subscribe/${selectedSubscriberId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json', // Expect JSON response
+                        'X-Subscriber-Token': subscriberToken
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                if (result.length > 0) {
+                    resultDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<pre>No transactions found for this subscriber.</pre>`;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                console.error('Subscribe error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

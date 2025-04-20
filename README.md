@@ -151,3 +151,88 @@ Develop a small, clickable web interface demonstration using consistent, fake da
     *   Audit Log View: Simplified view tracing a single transaction's key steps through the system.
 *   **Error Simulation:**
     *   Demonstrate how the UI might indicate a processing error for a transaction (e.g., simulated SaaS failure).
+
+# PMDC Demo Application
+
+This directory contains a demonstration application showcasing a potential Private Market Data Controller (PMDC) concept using FastAPI.
+
+## Overview
+
+The demo simulates the interactions between different roles in a data exchange:
+
+*   **Publishers:** Entities that submit data (e.g., capital call notices) in their own format.
+*   **Subscribers:** Entities that retrieve data, translated into a format suitable for them.
+*   **Admin:** A central role for managing the system, viewing data, and controlling access rights.
+
+To provide a clear demonstration for each role, the demo is split into three separate FastAPI applications:
+
+1.  `demo/publisher_demo.py`: Simulates the publisher's perspective, allowing them to submit transactions.
+2.  `demo/subscriber_demo.py`: Simulates the subscriber's perspective, allowing them to fetch authorized and translated data.
+3.  `demo/admin_demo.py`: Simulates the admin's perspective, allowing viewing of all data and management of subscriber authorizations.
+
+Shared data models, in-memory data stores (simulating databases), and helper functions are located in `demo/common.py`.
+
+Basic HTML frontends for interacting with each demo are provided in the `demo/templates/` directory.
+
+## Prerequisites
+
+*   Python 3.7+
+*   pip (Python package installer)
+*   Virtual environment tool (optional but recommended)
+
+## Setup
+
+1.  **Clone the repository (if you haven't already).**
+
+2.  **Navigate to the workspace root directory.**
+
+3.  **Create and activate a virtual environment (recommended):**
+    ```bash
+    # Windows
+    python -m venv venv
+    .\venv\Scripts\activate
+
+    # macOS/Linux
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+4.  **Install the required Python packages:**
+    ```bash
+    pip install -r demo/requirements.txt
+    ```
+
+## Running the Demos
+
+Each demo application runs as a separate web server on a different port. You can run them simultaneously in separate terminals.
+
+**Make sure your virtual environment is activated before running these commands.** Navigate to the workspace root directory if you aren't already there.
+
+1.  **Run the Publisher Demo:**
+    ```bash
+    uvicorn demo.publisher_demo:app --reload --port 8001
+    ```
+    *   Access the UI: [http://localhost:8001/](http://localhost:8001/)
+    *   Access the API Docs (Swagger): [http://localhost:8001/docs](http://localhost:8001/docs)
+
+2.  **Run the Subscriber Demo:**
+    ```bash
+    uvicorn demo.subscriber_demo:app --reload --port 8002
+    ```
+    *   Access the UI: [http://localhost:8002/](http://localhost:8002/)
+    *   Access the API Docs (Swagger): [http://localhost:8002/docs](http://localhost:8002/docs)
+
+3.  **Run the Admin Demo:**
+    ```bash
+    uvicorn demo.admin_demo:app --reload --port 8003
+    ```
+    *   Access the UI: [http://localhost:8003/](http://localhost:8003/)
+    *   Access the API Docs (Swagger): [http://localhost:8003/docs](http://localhost:8003/docs)
+    *   **Note:** Admin API endpoints require an `X-Admin-Token` header with the value `admin_secret_token`. The admin UI provides an input field for this.
+
+## How to Use the Demo
+
+1.  Start all three servers.
+2.  Open the **Publisher Demo** (`localhost:8001`). Select a publisher and submit a transaction.
+3.  Open the **Admin Demo** (`localhost:8003`). Observe the submitted transaction in the "Stored Transactions" section. Use the admin interface (providing the token `admin_secret_token`) to manage which subscribers are authorized for each publisher.
+4.  Open the **Subscriber Demo** (`localhost:8002`). Select a subscriber and enter their corresponding token (e.g., `sub_token_abc` for Subscriber One). Fetch data to see the translated transactions they are authorized to view based on the admin settings.

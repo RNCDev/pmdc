@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMDC Admin Demo</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        h1, h2, h3 { margin-top: 30px; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; margin-top: 5px; white-space: pre-wrap; word-wrap: break-word; }
+        .data-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input[type=text], input[type=password] { width: 300px; padding: 5px; margin-top: 2px; }
+        select { margin-top: 2px; }
+        button { margin-top: 10px; padding: 8px 12px; cursor: pointer; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        #adminActions { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc; }
+        .subscriber-checkbox { margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <h1>PMDC Admin Demo</h1>
+
+    <div class="data-section">
+        <h2>Current State</h2>
+        <p><small>(Data is refreshed on page load)</small></p>
+
+        <h3>Publishers</h3>
+        <pre id="publishersData">{{ publishers | tojson(indent=2) }}</pre>
+
+        <h3>Subscribers</h3>
+        <pre id="subscribersData">{{ subscribers | tojson(indent=2) }}</pre>
+
+        <h3>Subscriptions (Publisher -> [Subscribers])</h3>
+        <pre id="subscriptionsData">{{ subscriptions | tojson(indent=2) }}</pre>
+
+        <h3>Stored Transactions (Canonical Format)</h3>
+        <pre id="transactionsData">{{ transactions | tojson(indent=2) if transactions else 'No transactions yet.' }}</pre>
+    </div>
+
+    <div id="adminActions" class="data-section">
+        <h2>Admin Actions</h2>
+        <label for="adminToken">Admin Token:</label>
+        <input type="password" id="adminToken" value="{{ admin_token_for_ui }}">
+        <small>Required for modifying actions.</small>
+
+        <h3>Manage Publisher Subscriptions</h3>
+        <form id="manageSubscriptionsForm">
+            <label for="publisherSelect">Select Publisher:</label>
+            <select id="publisherSelect" name="publisher_id" required>
+                <option value="">-- Select Publisher --</option>
+                {% for pub_id, pub_info in publishers.items() %}
+                    <option value="{{ pub_id }}">{{ pub_info.name }} ({{ pub_id }})</option>
+                {% endfor %}
+            </select>
+
+            <label>Authorized Subscribers:</label>
+            <div id="subscriberCheckboxes">
+                <p><small>Select a publisher above to see subscriber options.</small></p>
+                {% for sub_id, sub_info in subscribers.items() %}
+                    <div style="display: none;" data-sub-id="{{ sub_id }}">
+                        <input type="checkbox" id="sub_{{ sub_id }}" name="subscriber_ids" value="{{ sub_id }}" class="subscriber-checkbox">
+                        <label for="sub_{{ sub_id }}" style="display: inline; font-weight: normal;">{{ sub_info.name }} ({{ sub_id }})</label>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit">Update Subscriptions</button>
+        </form>
+        <div id="manageResult"></div>
+
+    </div>
+
+    <script>
+        const adminTokenInput = document.getElementById('adminToken');
+        const publisherSelect = document.getElementById('publisherSelect');
+        const subscriberCheckboxesDiv = document.getElementById('subscriberCheckboxes');
+        const manageResultDiv = document.getElementById('manageResult');
+        const manageForm = document.getElementById('manageSubscriptionsForm');
+
+        // Store initial subscription data (passed from server)
+        const currentSubscriptions = {{ subscriptions | tojson }};
+
+        function updateSubscriberCheckboxes() {
+            const selectedPubId = publisherSelect.value;
+            const checkboxes = subscriberCheckboxesDiv.querySelectorAll('div[data-sub-id]');
+            const placeholder = subscriberCheckboxesDiv.querySelector('p');
+
+            if (selectedPubId) {
+                placeholder.style.display = 'none';
+                const authorizedSubs = currentSubscriptions[selectedPubId] || [];
+                checkboxes.forEach(div => {
+                    const checkbox = div.querySelector('input[type=checkbox]');
+                    const subId = div.getAttribute('data-sub-id');
+                    checkbox.checked = authorizedSubs.includes(subId);
+                    div.style.display = 'block'; // Show the checkbox div
+                });
+            } else {
+                placeholder.style.display = 'block';
+                checkboxes.forEach(div => {
+                    div.style.display = 'none'; // Hide checkboxes if no publisher is selected
+                });
+            }
+        }
+
+        publisherSelect.addEventListener('change', updateSubscriberCheckboxes);
+
+        manageForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const selectedPubId = publisherSelect.value;
+            const adminToken = adminTokenInput.value;
+            manageResultDiv.innerHTML = 'Processing...';
+
+            if (!selectedPubId) {
+                manageResultDiv.innerHTML = '<p class="error">Please select a publisher.</p>';
+                return;
+            }
+            if (!adminToken) {
+                manageResultDiv.innerHTML = '<p class="error">Admin Token is required.</p>';
+                return;
+            }
+
+            const selectedSubscribers = Array.from(subscriberCheckboxesDiv.querySelectorAll('input[type=checkbox]:checked'))
+                                            .map(cb => cb.value);
+
+            try {
+                const response = await fetch(`/admin/subscriptions/${selectedPubId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': adminToken
+                    },
+                    body: JSON.stringify({ subscriber_ids: selectedSubscribers })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                manageResultDiv.innerHTML = `<p class="success">${result.message}</p>`;
+
+                // Update the local state and UI display for immediate feedback
+                currentSubscriptions[selectedPubId] = selectedSubscribers;
+                document.getElementById('subscriptionsData').textContent = JSON.stringify(currentSubscriptions, null, 2);
+
+            } catch (error) {
+                manageResultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                console.error('Update subscription error:', error);
+            }
+        });
+
+        // Initial setup
+        updateSubscriberCheckboxes();
+
+    </script>
+</body>
+</html> 
